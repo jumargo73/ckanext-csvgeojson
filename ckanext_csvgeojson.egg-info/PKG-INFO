@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: ckanext-csvgeojson
+Version: 0.1
+Summary: Convierte CSV con coordenadas a GeoJSON para CKAN
+Dynamic: summary

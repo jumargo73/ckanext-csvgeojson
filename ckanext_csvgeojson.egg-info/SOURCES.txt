@@ -1,0 +1,7 @@
+setup.py
+ckanext_csvgeojson.egg-info/PKG-INFO
+ckanext_csvgeojson.egg-info/SOURCES.txt
+ckanext_csvgeojson.egg-info/dependency_links.txt
+ckanext_csvgeojson.egg-info/entry_points.txt
+ckanext_csvgeojson.egg-info/not-zip-safe
+ckanext_csvgeojson.egg-info/top_level.txt
