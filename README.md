@@ -50,7 +50,7 @@ Authorization: <API_KEY>
 css
 
 **Body:**
-```json
+json
 {
   "resource_id": "6ef7d6bc-e5d5-46ab-97d4-5321c93dd49f"
 }
@@ -64,6 +64,13 @@ json
 }
 
 Instalación
+
+
+Activar el Entorno virtual de ckan
+
+. /usr/lib/ckan/default/bin/activate
+
+
 Clonar el repositorio en el entorno CKAN:
 
 
@@ -77,11 +84,12 @@ pip install -e ckanext-csvgeojson
 Activar el plugin en ckan.ini:
 
 ini
-ckan.plugins = ... csvgeojson
+ckan.plugins = ... csv_to_geojson_api,csv_to_geojson_dataset_resource
 
 Reiniciar CKAN:
 
-supervisorctl restart ckan
+sudo service supervisor restart
+sudo service nginx restart
 
 Ejemplo curl
 
