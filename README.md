@@ -77,12 +77,12 @@ Clonar el repositorio en el entorno CKAN:
 cd /usr/lib/ckan/default/src
 git clone https://github.com/jumargo73/ckanext-csvgeojson.git
 
-Instalar dependencias:
+Instalar Plugin:
 
 sudo /usr/lib/ckan/default/bin/pip install -e /usr/lib/ckan/default/src/ckanext-csvgeojson
 sudo cp -r /usr/lib/ckan/default/src/ckanext-csvgeojson/ckanext/csvgeojson/ /usr/lib/ckan/default/src/ckan/ckanext/
 
-Instalar Dependencias
+Instalar Extensiones si la Pide
 sudo /usr/lib/ckan/default/bin/pip install -r /usr/lib/ckan/default/src/ckanext-csvgeojson/requirements.txt
 
 Activar el plugin en ckan.ini:
