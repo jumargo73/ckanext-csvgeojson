@@ -82,6 +82,9 @@ Instalar dependencias:
 sudo /usr/lib/ckan/default/bin/pip install -e /usr/lib/ckan/default/src/ckanext-csvgeojson
 sudo cp -r /usr/lib/ckan/default/src/ckanext-csvgeojson/ckanext/csvgeojson/ /usr/lib/ckan/default/src/ckan/ckanext/
 
+Instalar Dependencias
+sudo /usr/lib/ckan/default/bin/pip install -r /usr/lib/ckan/default/src/ckanext-csvgeojson/requirements.txt
+
 Activar el plugin en ckan.ini:
 
 ini
