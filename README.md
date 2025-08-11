@@ -74,12 +74,13 @@ Activar el Entorno virtual de ckan
 Clonar el repositorio en el entorno CKAN:
 
 
-cd /home/ckan/ckan/lib/default/src
+cd /usr/lib/ckan/default/src
 git clone https://github.com/jumargo73/ckanext-csvgeojson.git
 
 Instalar dependencias:
 
-pip install -e ckanext-csvgeojson
+sudo /usr/lib/ckan/default/bin/pip install -e /usr/lib/ckan/default/src/ckanext-csvgeojson
+sudo cp -r /usr/lib/ckan/default/src/ckanext-csvgeojson/ckanext/csvgeojson/ /usr/lib/ckan/default/src/ckan/ckanext/
 
 Activar el plugin en ckan.ini:
 
@@ -97,6 +98,9 @@ curl -X POST "http://www.datosabiertos.valledelcauca.gov.co/api/3/action/convert
      -H "Authorization: TU_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{"resource_id": "6ef7d6bc-e5d5-46ab-97d4-5321c93dd49f"}'
+
+Si se necesita desistalarlo 
+sudo /usr/lib/ckan/default/bin/pip uninstall ckanext-csvgeojson -y
 
 Troubleshooting
 GeoJSONConverter.detectar_columnas_coord() missing 1 required positional argument
