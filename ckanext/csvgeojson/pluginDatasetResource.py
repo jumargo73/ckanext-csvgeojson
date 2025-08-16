@@ -56,7 +56,7 @@ class CSVtoGeoJSONDatasetResourcePlugin(SingletonPlugin):
         if resource.get('format', '').lower() == 'csv':
 
             # Obtener dataset completo
-            package = get_action('package_show')(context, {'id': resource['package_id']})
+            package = toolkit.get_action('package_show')(context, {'id': resource['package_id']})
             
             
             # Buscar recurso GeoJSON ya existente en el paquete
