@@ -1,0 +1,42 @@
+{% extends "page.html" %}
+
+{% block page_title %}Listado de Sellos de Excelencia{% endblock %}
+
+{% block primary_content %}
+<h2>Agregar recurso a {{ package.title }}</h2>
+<form action="{{ h.url_for('sello_excelencia.new_sello_resource', package_id=package.id)  }}" 
+      method="post" 
+      enctype="multipart/form-data">
+
+    <!-- Token CSRF obligatorio en CKAN -->
+	
+	{{ csrf_field|safe }}
+
+    <!-- package_id para asociar el recurso al dataset -->
+    <input type="hidden" name="package_id" value="{{ package.id }}">
+	
+	
+    <div class="form-group">
+        <label for="name">Nombre del sello:</label>
+        <input type="text" name="name" id="name" class="form-control" placeholder="Ej: Sello de Excelencia" required>
+    </div>
+
+    <div class="form-group">
+        <label for="upload">Archivo del sello:</label>
+        <input type="file" name="upload" id="upload" class="form-control" required>
+    </div>
+	
+	<div class="form-group">
+        <label for="format">Formato:</label>
+        <input type="text" name="format" id="format" class="form-control" placeholder="Ej: PDF, CSV, XLSX" required>
+    </div>
+
+    <!-- Campos opcionales -->
+    <div class="form-group">
+        <label for="description">Descripción:</label>
+        <textarea name="description" id="description" class="form-control" placeholder="Breve descripción"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar sello</button>
+</form>
+{% endblock %}

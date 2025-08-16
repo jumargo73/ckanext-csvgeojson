@@ -1,0 +1,33 @@
+{% extends "page.html" %}
+
+{% block page_title %}Listado de Sellos de Excelencia{% endblock %}
+
+{% block primary_content %}
+<h1>Sellos de Excelencia</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+		  <th>Título</th>
+		  <th>Descripción</th>
+		  <th>PDF</th>
+		  <th>Fecha</th>
+		  <th>Categoría</th>
+		</tr>
+    <tbody>	
+		{% if sellos %}			
+			{#<pre>Type: {{ sellos.__class__ }}  Length: {{ sellos|length }} {{ sellos }}<pre>#}	
+			{% for sello in sellos %}
+			<tr>
+			  <td>{{ sello.title }}</td>
+			  <td>{{ sello.description }}</td>
+			  <td><a href="{{ sello.pdf_url }}" target="_blank">Ver PDF</a></td>
+			  <td>{{ sello.fecha }}</td>
+			  <td>{{ sello.categoria }}</td>
+			</tr>
+			{% endfor %}
+		{% else %}
+			<p>No hay sellos disponibles.</p>
+		{% endif %}
+    </tbody>
+</table>
+{% endblock %}

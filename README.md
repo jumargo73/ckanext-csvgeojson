@@ -105,6 +105,60 @@ curl -X POST "http://www.datosabiertos.valledelcauca.gov.co/api/3/action/convert
 Si se necesita desistalarlo 
 sudo /usr/lib/ckan/default/bin/pip uninstall ckanext-csvgeojson -y
 
+# Arquitectura del Módulo Sello Excelencia
+
+Este módulo está dividido en **dos clases principales** con responsabilidades separadas:
+
+lua
+Copiar
+Editar
+      +-------------------------+
+      |   CKAN / Usuario        |
+      +-------------------------+
+                 |
+     -------------------------
+     |                       |
+     v                       v
++--------------------+ +-----------------------------+
+| SelloExcelenciaView| | CSVtoGeoJSONDatasetResource |
+| (Blueprint & UI) | | (Eventos CKAN) |
++--------------------+ +-----------------------------+
+| - get_blueprint() | | - before_create(pkg/res) |
+| - Rutas / Templates| | - after_create(pkg/res) |
+| - /sello/listar | | - before_update(pkg/res) |
+| - /resource_form | | - after_update(pkg/res) |
+| - app_context_proc | | |
+| - inject_sello_ | | |
+| extras() | | |
++--------------------+ +-----------------------------+
+| ^
+| |
+| |
++-----------------------+
+(interacción)
+
+### Descripción de la interacción
+
+1. **SelloExcelenciaView**
+   - Maneja todas las **rutas y vistas** del módulo.
+   - `@app_context_processor` inyecta variables para los templates.
+   - `update_config()` permite configurar CKAN al iniciar el plugin.
+
+2. **CSVtoGeoJSONDatasetResourcePlugin**
+   - Maneja **eventos de CKAN** sobre datasets (`IPackageController`) y recursos (`IResourceController`).
+   - Se encarga de **agregar, validar o eliminar los “sellos de excelencia”** en los extras cuando un dataset o recurso se crea o edita.
+
+3. **Flujo de datos**
+   - El usuario interactúa con las **vistas** definidas en `SelloExcelenciaView`.
+   - Cuando se crea o edita un dataset o recurso, CKAN dispara los **hooks de eventos**, que son capturados por `CSVtoGeoJSONDatasetResourcePlugin`.
+   - Los templates pueden acceder a variables globales inyectadas desde `inject_sello_extras()`.
+
+---
+
+✅ Este esquema muestra claramente la **separación de responsabilidades**:
+- Una clase solo maneja la UI y rutas.  
+- Otra clase solo maneja la lógica de eventos de CKAN.
+
 Troubleshooting
 GeoJSONConverter.detectar_columnas_coord() missing 1 required positional argument
 → Usar GeoJSONConverter.detectar_columnas_coord(columnas) correctamente.
