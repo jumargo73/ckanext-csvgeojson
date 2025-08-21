@@ -191,14 +191,23 @@ class SelloExcelenciaView(SingletonPlugin):
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
         #log.info(f"[SelloResourcePlugin] Buscando templates en: {template_path}")
 
+         # Archivos estáticos (public)
+        public_path = os.path.join(os.path.dirname(__file__), "public")
+        #log.info(f"[SelloResourcePlugin] Buscando images en: {public_path}")
+
         # Verificar que los archivos existan
         for root, dirs, files in os.walk(template_path):
             for f in files:
                 log.info(f"[SelloResourcePlugin] Template detectado: {os.path.join(root, f)}")
 
+        # Verificar que los archivos existan
+        for root, dirs, files in os.walk(public_path):
+            for f in files:
+                log.info(f"[SelloResourcePlugin] Imagenes detectadas: {os.path.join(root, f)}")
       
         # Método oficial CKAN
         toolkit.add_template_directory(config, 'templates')
+        toolkit.add_public_directory(config, 'public')
 
         # Método manual como respaldo
         if 'extra_template_paths' in config:
@@ -241,10 +250,12 @@ class SelloExcelenciaView(SingletonPlugin):
                             extras = {}                           
                     elif isinstance(r.extras, dict):
                         extras = r.extras
-                        #log.info("[SelloExcelenciaView] listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
-                        
-                if extras.get('type') != 'sello_excelencia':
-                    continue
+                        log.info("[SelloExcelenciaView] listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
+
+                
+
+                '''if extras.get('type') != 'sello_excelencia':
+                    continue'''
 
                 # Construir nombre del archivo
                 archivo = r.url.split('/')[-1] if r.url else ''
@@ -264,7 +275,10 @@ class SelloExcelenciaView(SingletonPlugin):
                     'description': r.description,
                     'pdf_url': url_descarga,
                     'fecha': r.created,
-                    'categoria': extras.get('type', 'sello_excelencia')
+                    'categoria': extras.get('type'),
+                    'fecha_obtencion': extras.get('fecha_obtencion'),
+                    'dependiencia': extras.get('owner_org'),
+                    'nivel': extras.get('nivel')
                 })
             
             # 🔹 Log completo de la lista sellos
@@ -285,6 +299,9 @@ class SelloExcelenciaView(SingletonPlugin):
                     {'ignore_auth': True},
                     {'id': package_id}
                 )
+
+
+                organizations=self.listar_organizaciones()
                 
                 if not package:
                     h.flash_error("Dataset no encontrado")
@@ -300,6 +317,9 @@ class SelloExcelenciaView(SingletonPlugin):
                     nombre_limpio = re.sub(r'\s+', '_', nombre.strip())
                     extension = toolkit.request.form.get('format')
                     description = toolkit.request.form.get('description')
+                    owner_org = toolkit.request.form.get('owner_org')
+                    fecha_obtencion = toolkit.request.form.get('fecha_obtencion')
+                    nivel = toolkit.request.form.get('nivel')
                     
                     # 2️⃣ Recibir el archivo
                     archivo = toolkit.request.files.get('upload')
@@ -310,9 +330,13 @@ class SelloExcelenciaView(SingletonPlugin):
                     log.info("[SelloExcelenciaView] new_sello_resource Package ID:: %s", package_id)
                     log.info("[SelloExcelenciaView] new_sello_resource Nombre: %s", nombre)
                     log.info("[SelloExcelenciaView] new_sello_resource Extensión: %s", extension)
-                    log.info("[SelloExcelenciaView] new_sello_resource Descripción: %s", description)                
+                    log.info("[SelloExcelenciaView] new_sello_resource Descripción: %s", description)
+                    log.info("[SelloExcelenciaView] new_sello_resource owner_org: %s", owner_org) 
+                    log.info("[SelloExcelenciaView] new_sello_resource fecha_obtencion: %s", fecha_obtencion)   
+                    log.info("[SelloExcelenciaView] new_sello_resource nivel: %s", nivel)                   
                 
                     package = toolkit.get_action('package_show')({'user': toolkit.c.user}, {'id': package_id})
+                    organizacion = toolkit.get_action('organization_show')({'user': toolkit.c.user}, {'id': owner_org})
                     
                     file_name = nombre_archivo = "{}.{}".format(nombre_limpio,extension)
                     
@@ -321,7 +345,7 @@ class SelloExcelenciaView(SingletonPlugin):
                         nombre_archivo = archivo.filename
                         
                         #Crear Recurso
-                        result = self.crear_sello_excelencia(package,file_name,archivo,context)
+                        result = self.crear_sello_excelencia(package,file_name,archivo,context,organizacion)
                         
                         #toolkit.h.flash_success("Recurso creado correctamente")
                         return toolkit.redirect_to('dataset_read', id=package_id)
@@ -331,7 +355,8 @@ class SelloExcelenciaView(SingletonPlugin):
                     'sello/resource_form.html',
                     {
                         'package': package,
-                        'csrf_field': h.csrf_input()
+                        'csrf_field': h.csrf_input(),
+                        'organizations':organizations
                     }
                 )
             except ckan.logic.NotFound:
@@ -364,7 +389,7 @@ class SelloExcelenciaView(SingletonPlugin):
         return sello_bp
     
     
-    def crear_sello_excelencia(self, package,file_name,archivo,context):
+    def crear_sello_excelencia(self, package,file_name,archivo,context,organizacion):
         
         
         try:
@@ -429,25 +454,43 @@ class SelloExcelenciaView(SingletonPlugin):
             updated_resource = toolkit.get_action('resource_update')(context, resource_dict)
     
             # 5 Marcar Etiqueta de Sello
-            response=self.marcar_recurso_sello(resource_id)
+            response=self.marcar_recurso_sello(resource_id,organizacion)
             log.info("[SelloExcelenciaView] Recurso Creado con Exito")
             return True
         except Exception as e:
             log.info("[SelloExcelenciaView] Error al guardar el archivo: $s",e)           
             return  False
 
-    def marcar_recurso_sello(self, resource_id):
+    def marcar_recurso_sello(self, resource_id,organizacion):
 
         try:
 
             log.info("[SelloExcelenciaView] marcar_recurso_sello Ejecutado")
 
+            # El context suele incluir al usuario (puede ser sysadmin)
+            context = {
+                'model': model,
+                'session': model.Session,
+                'user': toolkit.c.user  # o el nombre de un usuario válido
+            }
+
             # Obtener el recurso actual
-            get_resource = toolkit.get_action('resource_show')
+            get_resource = toolkit.get_action('resource_show')            
             resource = get_resource({'ignore_auth': True}, {'id': resource_id})
+
+            #owner_org = toolkit.request.form.get('owner_org')
+            #organizacion = toolkit.get_action('organization_show')(context, {'id': owner_org})
+        
+            fecha_obtencion = toolkit.request.form.get('fecha_obtencion')
+            nivel = toolkit.request.form.get('nivel')
+
 
             # Agregar la bandera como campo plano (CKAN lo guarda en extras)
             resource['type'] = 'sello_excelencia'
+            resource['fecha_obtencion'] = fecha_obtencion
+            resource['nivel'] = nivel
+            resource['owner_org'] = organizacion['name']
+            
 
             # Mantener datastore_active si existe
             if 'datastore_active' in resource:
@@ -475,5 +518,27 @@ class SelloExcelenciaView(SingletonPlugin):
 
     def _get_sello_pdf(self, dataset_id):
         pass
+
+    def listar_organizaciones(self):
+        # El context suele incluir al usuario (puede ser sysadmin)
+        context = {
+            'model': model,
+            'session': model.Session,
+            'user': toolkit.c.user  # o el nombre de un usuario válido
+        }
+
+
+        data_dict = {
+            'all_fields': True,   # Si quieres que traiga más datos
+            'include_extras': True
+        }
+
+        orgs = toolkit.get_action('organization_list')(context, data_dict)
+
+        '''for org in orgs:
+            print(org['name'], "-", org.get('title'))'''
+
+        return orgs  
         
 
+  
