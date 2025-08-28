@@ -4,7 +4,7 @@ from ckan.plugins.interfaces import IResourceView, IConfigurer, IBlueprint
 from flask import Blueprint,request
 import json, logging,os,  mimetypes
 from datetime import datetime
-import ckan.logic
+import ckan.logic as logic
 import ckan.model as model
 from model import Session, Resource,Package,PackageExtra
 import fitz  
@@ -224,8 +224,22 @@ class SelloExcelenciaView(SingletonPlugin):
 
             log.info("[SelloExcelenciaView] listar_sellos ejecutado")
             
-            context = {'model': model, 'session': model.Session}
-            
+            '''context = {'user': toolkit.c.user or toolkit.config.get('ckan.site_id')}
+
+            #log.info("[SelloExcelenciaView] context: %s", json.dumps(context, indent=2, ensure_ascii=False))
+
+            # aquí validas si tiene permisos, por ejemplo acceso admin a dataset
+            try: 
+                toolkit.check_access('package_update', context)
+                log.info("[SelloExcelenciaView] Con Acceso")
+                can_edit = True
+            except logic.NotAuthorized:
+                log.info("[SelloExcelenciaView] Sin acceso")
+                can_edit = False'''
+
+            can_edit = True    
+            log.info("[SelloExcelenciaView] acceso: true")
+
             # URL base del portal CKAN
             base_url = config.get('ckan.site_url', '').rstrip('/')
             log.info("[SelloExcelenciaView] base_url: %s", base_url)
@@ -234,7 +248,7 @@ class SelloExcelenciaView(SingletonPlugin):
             recursos = Session.query(Resource).filter(
                 Resource.format.ilike('PDF')
             ).all()
-       
+    
             
             sellos = []
             
@@ -266,7 +280,8 @@ class SelloExcelenciaView(SingletonPlugin):
                 log.info("[SelloExcelenciaView] resource_id: %s", r.id)
                 log.info("[SelloExcelenciaView] archivo: %s", archivo)
                 log.info("[SelloExcelenciaView] url_descarga: %s", url_descarga)
-                    
+
+                
                 # Agregar a la lista
                 sellos.append({
                     "id": r.id,
@@ -281,12 +296,185 @@ class SelloExcelenciaView(SingletonPlugin):
                     'nivel': extras.get('nivel')
                 })
             
+            # ---------------------------
+            # Paginación
+            # ---------------------------
+            per_page = 10  # cantidad de sellos por página
+            page = int(request.args.get("page", 1))  # ?page=2
+            total = len(sellos)
+
+            # calcular inicio y fin
+            start = (page - 1) * per_page
+            end = start + per_page
+
+            # recorte de la lista
+            sellos_paginados = sellos[start:end]
+
+            # total de páginas
+            total_pages = (total + per_page - 1) // per_page
+                    
             # 🔹 Log completo de la lista sellos
             log.info("Lista completa de sellos: %s", sellos)
 
-            return toolkit.render('sello/listar.html', {'sellos': sellos})
-        
+            return toolkit.render('sello/listar.html', {'sellos': sellos_paginados,'page':page,'total_pages':total_pages, 'can_edit': can_edit})
+
+        @sello_bp.route('/sello/edit/<id>')
+        def sello_edit(id):
+
             
+            log.info("[sello_excelencia] sello_edit Ejecutado") 
+           
+            # 🔹 Log completo de la lista sellos
+            log.info("[sello_excelencia] sello_edit id: %s", id)
+
+            context = {'model': model, 'session': model.Session,'user': toolkit.c.user or toolkit.config.get('ckan.site_id')}
+            
+            organizations=self.listar_organizaciones()
+
+            log.info("[sello_excelencia] sello_edit organizations: %s", json.dumps(organizations, indent=2, ensure_ascii=False))
+           
+ 
+            sello = self.get_sello(id,context)  # lógica de obtener el recurso
+            
+            log.info("[sello_excelencia] sello_edit sello: %s", sello)
+
+            extras = {}
+            if sello.extras:
+                if isinstance(sello.extras, str):
+                    try:
+                        extras = json.loads(sello.extras)
+                    except Exception:
+                        extras = {}                           
+                elif isinstance(sello.extras, dict):
+                    extras = sello.extras
+            
+            log.info("[SelloExcelenciaView] listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
+
+            package = toolkit.get_action('package_show')(
+                    context,
+                    {'id': sello.package_id}
+                )
+            
+            log.info("[sello_excelencia] sello_edit package: %s", json.dumps(package, indent=2, ensure_ascii=False))
+                        
+            log.info("[sello_excelencia] sello_edit organizacion_id: %s", package['organization']['id'])
+            
+            entidad = toolkit.get_action('organization_show')(
+                    context,
+                    {'id': package['organization']['id']}
+                )
+
+            log.info("[sello_excelencia] sello_edit organization: %s", json.dumps(entidad, indent=2, ensure_ascii=False))
+              
+
+            # Si es GET, mostrar formulario
+            return toolkit.render(
+                'sello/resource_form.html',
+                {
+                    'package': package,
+                    'csrf_field': h.csrf_input(),
+                    'organizations':organizations,
+                    'resource':sello,
+                    'entidad':entidad,
+                    'extras':extras
+                }
+            )
+
+        @sello_bp.route('/sello/update/<id>', methods=['POST'])   
+        def update_sello_resource(id):
+
+            context = {'model': model, 'session': model.Session, 'user': toolkit.c.user}
+            # 1️⃣ Recibir los textos
+            package_id = toolkit.request.form.get('package_id')
+            nombre = toolkit.request.form.get('name')
+            nombre_limpio = re.sub(r'\s+', '_', nombre.strip())
+            extension = toolkit.request.form.get('format')
+            description = toolkit.request.form.get('description')
+            owner_org = toolkit.request.form.get('owner_org')
+            fecha_obtencion = toolkit.request.form.get('fecha_obtencion')
+            nivel = toolkit.request.form.get('nivel')
+            
+            # 2️⃣ Recibir el archivo
+            archivo = toolkit.request.files.get('upload')
+            file_path = None
+        
+            # 3️⃣ Aquí haces lo que necesites con los datos, por ejemplo:
+            
+            log.info("[SelloExcelenciaView] update_sello_resource Package ID:: %s", package_id)
+            log.info("[SelloExcelenciaView] update_sello_resource Nombre: %s", nombre)
+            log.info("[SelloExcelenciaView] update_sello_resource Extensión: %s", extension)
+            log.info("[SelloExcelenciaView] update_sello_resource Descripción: %s", description)
+            log.info("[SelloExcelenciaView] update_sello_resource owner_org: %s", owner_org) 
+            log.info("[SelloExcelenciaView] update_sello_resource fecha_obtencion: %s", fecha_obtencion)   
+            log.info("[SelloExcelenciaView] update_sello_resource nivel: %s", nivel)                   
+        
+            resource = toolkit.get_action('resource_show')({'user': toolkit.c.user}, {'id': id})
+            package = toolkit.get_action('package_show')({'user': toolkit.c.user}, {'id': resource['package_id']})
+            
+            organizacion = toolkit.get_action('organization_show')({'user': toolkit.c.user}, {'id': owner_org})
+            
+            file_name=None
+
+            nombre_archivo = "{}.{}".format(nombre_limpio,extension)
+            
+            
+            if archivo:
+                file_name = nombre_archivo = "{}.{}".format(nombre_limpio,extension)
+                #nombre_archivo = archivo.filename
+
+                # 1 Crear Recurso
+                resource_dict= {
+                    'package_id':package['id'] ,
+                    'name':nombre,
+                    'url':file_name,  # URL temporal,
+                    'format':extension,
+                    'description':description
+                }
+            else:
+                # 1 Crear Recurso
+                resource_dict= {
+                    'package_id':package['id'] ,
+                    'name':nombre,
+                    'url':nombre_archivo,  # URL temporal,                    
+                    'format':extension,
+                    'description':description
+                }
+
+            log.info("[SelloExcelenciaView] update_sello_resource resource_dict: %s", resource_dict)
+            
+            #Crear Recurso
+            result = self.save_sello_excelencia(resource_dict,file_name,archivo,context,organizacion,resource)
+            
+            #toolkit.h.flash_success("Recurso creado correctamente")
+            return toolkit.redirect_to(toolkit.h.url_for('sello_excelencia.listar_sellos'))
+                
+
+            
+
+        
+        @sello_bp.route('/sello/delete/<id>', methods=['POST'])
+        def sello_delete(id):
+
+            context = {
+                "model": model,
+                "session": model.Session,
+                "user": toolkit.c.user  # usuario actual
+            }
+
+            data_dict = {"id": id}
+
+            try:
+                toolkit.get_action("resource_delete")(context, data_dict)
+                toolkit.h.flash_success("Recurso eliminado correctamente.")
+            except toolkit.ObjectNotFound:
+                toolkit.h.flash_error("El recurso no existe.")
+            except toolkit.NotAuthorized:
+                toolkit.h.flash_error("No tienes permisos para eliminar este recurso.")
+
+            return toolkit.redirect_to(toolkit.h.url_for("sello_excelencia.listar_sellos"))         
+            
+            
+        
         @sello_bp.route('/sello/resource_form/<package_id>', methods=['GET', 'POST'])
         def new_sello_resource(package_id):            
     
@@ -335,20 +523,37 @@ class SelloExcelenciaView(SingletonPlugin):
                     log.info("[SelloExcelenciaView] new_sello_resource fecha_obtencion: %s", fecha_obtencion)   
                     log.info("[SelloExcelenciaView] new_sello_resource nivel: %s", nivel)                   
                 
+                  
+
                     package = toolkit.get_action('package_show')({'user': toolkit.c.user}, {'id': package_id})
                     organizacion = toolkit.get_action('organization_show')({'user': toolkit.c.user}, {'id': owner_org})
                     
-                    file_name = nombre_archivo = "{}.{}".format(nombre_limpio,extension)
+                    
                     
                     if archivo:
+
+                        file_name = nombre_archivo = "{}.{}".format(nombre_limpio,extension)
+                        #nombre_archivo = archivo.filename
+
+                        # 1 Crear Recurso
+                        resource_dict= {
+                            'package_id':package['id'] ,
+                            'name':nombre,
+                            'url':file_name,  # URL temporal,
+                            'format':extension,
+                            'description':description
+                        }
+
+                        log.info("[SelloExcelenciaView] new_sello_resource resource_dict: %s", resource_dict)
                         
-                        nombre_archivo = archivo.filename
+                       
                         
                         #Crear Recurso
-                        result = self.crear_sello_excelencia(package,file_name,archivo,context,organizacion)
+                        result = self.save_sello_excelencia(resource_dict,file_name,archivo,context,organizacion)
                         
                         #toolkit.h.flash_success("Recurso creado correctamente")
-                        return toolkit.redirect_to('dataset_read', id=package_id)
+                        return toolkit.redirect_to(toolkit.h.url_for('sello_excelencia.listar_sellos'))
+                      
                     
                 # Si es GET, mostrar formulario
                 return toolkit.render(
@@ -359,7 +564,7 @@ class SelloExcelenciaView(SingletonPlugin):
                         'organizations':organizations
                     }
                 )
-            except ckan.logic.NotFound:
+            except logic.NotFound:
                 # Handle the case where the package is not found
                 h.flash_error("Dataset no encontrado")
                 return h.redirect_to('home.index')
@@ -388,8 +593,29 @@ class SelloExcelenciaView(SingletonPlugin):
             
         return sello_bp
     
+
+
+    def get_sello(self, id,context):
+
+        resource = Session.query(Resource).filter(
+            Resource.format.ilike('PDF'),
+            Resource.id == id
+        ).first()
+        #resource = toolkit.get_action('resource_show')(context, {'id': id})
+        return resource
+
+    def sello_edit(self, id,context):
+        resource = toolkit.get_action('resource_show')(context, {'id': id})
+        return resource
+        
+
+
+    def sello_delete(self, id,context):
+        resource = toolkit.get_action('resource_delete')(context, {'id': id})
+        return resource
+
     
-    def crear_sello_excelencia(self, package,file_name,archivo,context,organizacion):
+    def save_sello_excelencia(self, resource_dict,file_name,archivo,context,organizacion,resource=None):
         
         
         try:
@@ -398,22 +624,38 @@ class SelloExcelenciaView(SingletonPlugin):
             Crea un recurso placeholder y luego actualiza con extras y datos reales.
             """
 
-            package_id = package['id']
+            #package_id = package['id']
             
-            data_dict = dict(toolkit.request.form)
-            
+            #data_dict = dict(toolkit.request.form)
 
             # 1 Crear Recurso
-            resource_dict= {
+            '''resource_dict= {
                 'package_id':package_id ,
                 'name':data_dict.get('name'),
                 'url':file_name,  # URL temporal,
                 'format':data_dict.get('format'),
-                'description':data_dict.get('description', '')
-            }
+                'description':data_dict.get('description')
+            }'''
+
+
+            if resource:
+                # Actualizar recurso existente
+                resource_dict["id"] = resource["id"]
+                action = "resource_update"
+                resource = toolkit.get_action('resource_update')(context, resource_dict)
+                log.info("[SelloExcelenciaView] save_sello_excelencia resource update: %s", json.dumps(resource, indent=2, ensure_ascii=False))
+
+            else:
+                # Crear nuevo recurso
+                action = "resource_create"
+            
+                resource = toolkit.get_action('resource_create')(context, resource_dict)
+                log.info("[SelloExcelenciaView] save_sello_excelencia create: %s", json.dumps(resource, indent=2, ensure_ascii=False))
+
            
-            resource = toolkit.get_action('resource_create')(context, resource_dict)
-           
+            
+            
+            
             resource_id = resource['id']
             
             #log.info("[SelloExcelenciaView] crear_sello_excelencia resource_id: %s", resource_id)
@@ -421,6 +663,8 @@ class SelloExcelenciaView(SingletonPlugin):
             nuevo_nombre = resource_id[6:] 
             #log.info("[SelloExcelenciaView] crear_sello_excelencia nuevo_nombre: %s", nuevo_nombre)
                       
+            
+           
             # 2 Calcular ruta destino CKAN
             geojson_res_id = resource_id # UUID del recurso
             storage_path = toolkit.config.get('ckan.storage_path')
@@ -432,7 +676,10 @@ class SelloExcelenciaView(SingletonPlugin):
             # 3 Guardar Archivo
             nuevo_nombre = resource_id[6:] 
             dest_path = os.path.join(dest_dir, nuevo_nombre)
-            archivo.save(dest_path)
+            
+            if file_name is not None:
+                archivo.save(dest_path)
+
 
             # 4 Obtener size, last_modified y mimetype
             size = os.path.getsize(dest_path)
@@ -440,22 +687,37 @@ class SelloExcelenciaView(SingletonPlugin):
             mimetype, encoding = mimetypes.guess_type(archivo.filename, strict=True)
             
             
-            # 4 Actualizar URL y otros campos
+            # 1. Obtener el recurso completo
+            #resource = toolkit.get_action('resource_show')(context, {'id': resource_id})
 
-            resource_dict = {
+            # 5. Actualizar solo los campos que quieras cambiar
+            resource['url_type'] = 'upload'
+            resource['size'] = size
+            resource['mimetype'] = mimetype
+            resource['last_modified'] = last_modified.isoformat()
+
+            # 6 Actualizar URL y otros campos
+
+            '''resource_dict = {
                 'id': resource_id,
                 'url_type': 'upload',
                 'url':file_name,
                 'size': size,
                 'mimetype': mimetype,
                 'last_modified': last_modified.isoformat()
-            }
+            }'''
             
-            updated_resource = toolkit.get_action('resource_update')(context, resource_dict)
+            
+            # 6. Mandar el recurso completo a update
+            updated_resource = toolkit.get_action('resource_update')(context, resource)
+            #updated_resource = toolkit.get_action('resource_update')(context, resource_dict)
+
+            log.info("[SelloExcelenciaView] save_sello_excelencia resource update 1: %s", json.dumps(updated_resource, indent=2, ensure_ascii=False))
+
     
             # 5 Marcar Etiqueta de Sello
             response=self.marcar_recurso_sello(resource_id,organizacion)
-            log.info("[SelloExcelenciaView] Recurso Creado con Exito")
+            log.info("[SelloExcelenciaView] Recurso Guardado con Exito")
             return True
         except Exception as e:
             log.info("[SelloExcelenciaView] Error al guardar el archivo: $s",e)           
@@ -478,6 +740,9 @@ class SelloExcelenciaView(SingletonPlugin):
             get_resource = toolkit.get_action('resource_show')            
             resource = get_resource({'ignore_auth': True}, {'id': resource_id})
 
+            log.info("[SelloExcelenciaView] marcar_recurso_sello resource show: %s", resource)
+
+
             #owner_org = toolkit.request.form.get('owner_org')
             #organizacion = toolkit.get_action('organization_show')(context, {'id': owner_org})
         
@@ -489,7 +754,7 @@ class SelloExcelenciaView(SingletonPlugin):
             resource['type'] = 'sello_excelencia'
             resource['fecha_obtencion'] = fecha_obtencion
             resource['nivel'] = nivel
-            resource['owner_org'] = organizacion['name']
+            resource['owner_org'] = organizacion['title']
             
 
             # Mantener datastore_active si existe
@@ -499,6 +764,9 @@ class SelloExcelenciaView(SingletonPlugin):
             # Actualizar
             update_resource = toolkit.get_action('resource_update')
             update_resource({'ignore_auth': True}, resource)
+
+            log.info("[SelloExcelenciaView] marcar_recurso_sello resource update: %s", update_resource)
+
 
             log.info("[SelloExcelenciaView] marcar_recurso_sello marca guardada con exito")
 

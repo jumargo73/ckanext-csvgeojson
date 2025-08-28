@@ -123,6 +123,7 @@ class GeoJSONConverter:
                 response =  get_action('resource_create')(context, create_data)
                 log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson crear_recurso_geojson Recurso creado: %s", json.dumps(response, indent=2, ensure_ascii=False))
                 
+        
         # Parchar el campo `url` para que tenga el nombre correcto del archivo
         get_action('resource_patch')(context, {
             'id': response['id'],

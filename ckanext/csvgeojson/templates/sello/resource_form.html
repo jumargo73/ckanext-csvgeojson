@@ -1,10 +1,15 @@
 {% extends "page.html" %}
 
-{% block page_title %}Listado de Sellos de Excelencia{% endblock %}
+{%  block title  %}Cargar Sellos de Excelencia{% endblock %}
 
 {% block primary_content %}
+
 <h2>Agregar recurso a {{ package.title }}</h2>
-<form action="{{ h.url_for('sello_excelencia.new_sello_resource', package_id=package.id)  }}" 
+<form action="{% if resource %}
+                 {{ h.url_for('sello_excelencia.update_sello_resource', id=resource.id) }}
+              {% else %}
+                 {{ h.url_for('sello_excelencia.new_sello_resource', package_id=package.id) }}
+              {% endif %}" 
       method="post" 
       enctype="multipart/form-data">
 
@@ -17,49 +22,71 @@
 	
 	
     <div class="form-group">
-        <label for="name">Nombre del sello:</label>
-        <input type="text" name="name" id="name" class="form-control" placeholder="Ej: Sello de Excelencia" required>
+        <label for="name">Nombre del sello</label>
+        <input type="text" name="name" id="name" class="form-control" placeholder="Ej: Sello de Excelencia" required value="{{ resource.name if resource is defined else ''}}">
     </div>
 
     <div class="form-group">
-        <label for="upload">Archivo del sello:</label>
-        <input type="file" name="upload" id="upload" class="form-control" required>
-    </div>
+      <label for="upload">Archivo del sello</label>
+
+      {% if resource is defined and resource.url %}
+          <p>
+              Archivo actual:
+              <a href="{{ resource.url }}" target="_blank">
+                  {{ resource.url }}
+              </a>
+          </p>
+      {% endif %}
+
+      <input type="file" name="upload" id="upload" class="form-control">
+  </div>
 
 
     <div class="form-group control-medium">
-      <label for="owner_org" class="form-label">Dependencia:</label>
+      <label for="owner_org" class="form-label">Dependencia</label>
       <div class="controls">
         <select id="owner_org" name="owner_org" data-module="autocomplete">
           <option value="" selected="selected"> Escoja una Organizacion</option>>
           {% for organization in organizations %}
-            <option value="{{ organization.id }}">{{organization.display_name }}</option>
+            <option value="{{ organization.id }}" {% if entidad is defined  and organization.id == entidad.id %}selected="selected"{% endif %}>{{organization.title }}</option>
           {% endfor %}
         </select>
       </div>
     </div>
 
     <div class="form-group">
-        <label for="fecha_obtencion">Fecha de Obtencion:</label>
-        <input type="date" name="fecha_obtencion" id="fecha_obtencion" class="form-control" required>
+        <label for="fecha_obtencion">Fecha de Obtencion</label>
+        <input type="date" name="fecha_obtencion" id="fecha_obtencion" class="form-control" required value="{{extras['fecha_obtencion'] if extras is defined else ''}}">
     </div>
 
-    <div class="form-group">
-        <label for="format">Nivel de Calificacion:</label>
-        <input type="text" name="nivel" id="nivel" class="form-control" placeholder="Ej: Nivel 1, Nivel 2, Nivel 3" required>
+    <div class="form-group control-medium">
+      <label for="nivel" class="form-label">Nivel de Calificacion</label>
+      <div class="controls">
+        <select id="nivel" name="nivel" data-module="autocomplete">
+          <option value="" selected="selected"> Escoja la Calificacion</option>>
+          <option value="Nivel1" {% if extras is defined and extras['nivel'] == "Nivel1" %}selected="selected"{% endif %}>Nivel 1</option>
+          <option value="Nivel2" {% if extras is defined and extras['nivel'] == "Nivel2" %}selected="selected"{% endif %}>Nivel 2</option>
+          <option value="Nivel3" {% if extras is defined and extras['nivel'] == "Nivel3" %}selected="selected"{% endif %}>Nivel 3</option>
+        </select>
+      </div>
     </div>
+   
 	
-	<div class="form-group">
-        <label for="format">Formato:</label>
-        <input type="text" name="format" id="format" class="form-control" placeholder="Ej: PDF, CSV, XLSX" required>
+	  <div class="form-group">
+        <label for="format">Formato</label>
+        <input type="text" name="format" id="format" class="form-control" placeholder="Ej: PDF, CSV, XLSX" required value="{{ resource.format if resource is defined else ''}}">
     </div>
 
     <!-- Campos opcionales -->
     <div class="form-group">
-        <label for="description">Descripción:</label>
-        <textarea name="description" id="description" class="form-control" placeholder="Breve descripción"></textarea>
-    </div>
+      <label for="description">Descripción</label>
+      <textarea name="description" id="description" class="form-control" placeholder="Breve descripción">{{ resource.description if resource is defined else ''}}</textarea>
+  </div>
 
     <button type="submit" class="btn btn-primary">Guardar sello</button>
 </form>
+{% endblock %}
+
+{% block secondary_content %}
+  {% snippet "snippets/sello/helplers.html", group_type=group_type %}
 {% endblock %}
