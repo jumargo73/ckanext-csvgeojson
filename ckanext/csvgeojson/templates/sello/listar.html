@@ -31,16 +31,20 @@
 							<p class="card-text"><strong>Nivel de Calificación:</strong> 
 							<span class="badge bg-info text-dark">{{ sello.nivel or "No definido" }}</span>
 							</p>
+							<p class="card-text mb-1"><strong>Descripción:</strong> {{ sello.description or "Sin descripción" }}</p>
 						</div>
 
 						<!-- Imagen + link PDF -->
 						<div class="col-md-3 text-center">
-							<a href="{{ sello.pdf_url }}" target="_blank">
+							<a href="#">
 								<img class="img-fluid rounded mb-2" src="{{ h.url_for_static('/img/sello.png') }}" 
 									alt="{{ sello.title }}" style="max-height:100px;">
 							</a>
-							<br>
+							<br>							
 							<div class="d-flex justify-content-center gap-2">
+								<a href="{{ sello.pdf_url }}" target="_blank" class="btn btn-sm btn-outline-primary"> Descargar 
+									
+								</a>
 								{% if h.check_access('resource_update', {'id': sello.id}) %}						
 									<!-- Botón: Editar -->
 									<a href="{{ h.url_for('sello_excelencia.sello_edit', id=sello.id) }}" 
