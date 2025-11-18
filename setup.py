@@ -11,6 +11,10 @@ setup(
         [ckan.plugins]
         csv_to_geojson_api=ckanext.csvgeojson.plugin:CSVtoGeoJSONApiPlugin
         csv_to_geojson_dataset_resource=ckanext.csvgeojson.pluginDatasetResource:CSVtoGeoJSONDatasetResourcePlugin
-        SelloExcelenciaView_to_resource=ckanext.csvgeojson.pluginDatasetResource:SelloExcelenciaView    
+        SelloExcelenciaView_to_resource=ckanext.csvgeojson.pluginDatasetResource:SelloExcelenciaView
+        Odata_Api=ckanext.csvgeojson.pluginOdata:ApiODataPluginView
+        shp_to_geojson=ckanext.csvgeojson.pluginZip_Shp_To_Geojson:ApiZipShpToGeojsonView    
+        FixDateFormatPlugin=ckanext.csvgeojson.pluginFixDateFormatPlugin:FixDateFormatPlugin
+        PowerBI=ckanext.csvgeojson.pluginAPI:DataJson
     ''',
 )

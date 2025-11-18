@@ -26,7 +26,7 @@
         <input type="text" name="name" id="name" class="form-control" placeholder="Ej: Sello de Excelencia" required value="{{ resource.name if resource is defined else ''}}">
     </div>
 
-    <div class="form-group">
+  <div class="form-group">
       <label for="upload">Archivo del sello</label>
 
       {% if resource is defined and resource.url %}

@@ -13,7 +13,7 @@ class GeoJSONConverter:
     @staticmethod
     def detectar_columnas_coord(columnas):
         
-        log.info("[CSVtoGeoJSONPlugin] convertir_a_geojson ejecutado")
+        log.info("[GeoJSONConverter] detectar_columnas_coord ejecutado")
         
         lat_variants = ['lat', 'latitude', 'latitud']
         lon_variants = ['lon', 'lng', 'longitud', 'longitude']
@@ -24,7 +24,7 @@ class GeoJSONConverter:
     @staticmethod
     def convertir_a_geojson(records, lat_col, lon_col):
         
-        log.info("[CSVtoGeoJSONPlugin] convertir_a_geojson ejecutado")
+        log.info("[GeoJSONConverter] convertir_a_geojson ejecutado")
         features = []
         for row in records:
             try:
@@ -50,19 +50,20 @@ class GeoJSONConverter:
         Si geojson_id está presente, actualiza el recurso existente;
         si no, crea uno nuevo.
         """
-        log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson ejecutado para recurso CSV %s", resource_id)
+        log.info("[GeoJSONConverter] convertir_csv_geojson ejecutado")
+        #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson ejecutado para recurso CSV %s", resource_id)
 
         context = {'ignore_auth': True}
 
         # 1. Obtener información del recurso CSV
         resource = get_action('resource_show')(context, {'id': resource_id})
-        log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Recurso Encontrado: %s", json.dumps(resource, indent=2, ensure_ascii=False))
+        #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Recurso Encontrado: %s", json.dumps(resource, indent=2, ensure_ascii=False))
         package_id = resource['package_id']
         nombre_origen = resource['name']
 
         # 2. Obtener datos del DataStore
         data = get_action('datastore_search')(context, {'resource_id': resource_id})
-        log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson data Encontrado: %s", data)
+        #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson data Encontrado: %s", data)
         records = data.get('records', [])
         if not records:
             log.error("[CSVtoGeoJSONPlugin] convertir_csv_geojson Sin datos en DataStore para %s", resource_id)
@@ -93,7 +94,7 @@ class GeoJSONConverter:
         # 6. Crear o actualizar recurso GeoJSON
         if geojson_id:
             # Actualizar recurso existente
-            log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Actualizando recurso GeoJSON existente ID=%s", geojson_id)
+            #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Actualizando recurso GeoJSON existente ID=%s", geojson_id)
             update_data = {
                 'id': geojson_id,
                 'format': 'GeoJSON',
@@ -107,7 +108,7 @@ class GeoJSONConverter:
             
         else:
             # Crear recurso nuevo
-            log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Creando nuevo recurso GeoJSON para paquete %s", package_id)
+            #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson Creando nuevo recurso GeoJSON para paquete %s", package_id)
             create_data = {
                 'package_id': package_id,
                 'name': f"{base_name} (GeoJSON)",
@@ -121,7 +122,7 @@ class GeoJSONConverter:
             with open(tmp_path, 'rb') as f:
                 create_data['upload'] = f
                 response =  get_action('resource_create')(context, create_data)
-                log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson crear_recurso_geojson Recurso creado: %s", json.dumps(response, indent=2, ensure_ascii=False))
+                #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson crear_recurso_geojson Recurso creado: %s", json.dumps(response, indent=2, ensure_ascii=False))
                 
         
         # Parchar el campo `url` para que tenga el nombre correcto del archivo
@@ -141,11 +142,11 @@ class GeoJSONConverter:
 
         shutil.copy(tmp_path, os.path.join(dest_dir, geojson_res_id[6:]))
 
-        log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson GeoJSON copiado manualmente a %s", os.path.join(dest_dir, geojson_res_id[6:]))
+        #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojson GeoJSON copiado manualmente a %s", os.path.join(dest_dir, geojson_res_id[6:]))
             
         # 8. Limpiar archivo temporal
         shutil.rmtree(tmp_dir)
-        log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojsonConversión a GeoJSON completada para %s", resource_id)
+        #log.info("[CSVtoGeoJSONPlugin] convertir_csv_geojsonConversión a GeoJSON completada para %s", resource_id)
 
     # Métodos auxiliares
     

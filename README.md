@@ -109,48 +109,85 @@ sudo /usr/lib/ckan/default/bin/pip uninstall ckanext-csvgeojson -y
 
 Este módulo está dividido en **dos clases principales** con responsabilidades separadas:
 
-lua
-Copiar
-Editar
-      +-------------------------+
-      |   CKAN / Usuario        |
-      +-------------------------+
-                 |
-     -------------------------
-     |                       |
-     v                       v
-+--------------------+ +-----------------------------+
-| SelloExcelenciaView| | CSVtoGeoJSONDatasetResource |
-| (Blueprint & UI) | | (Eventos CKAN) |
-+--------------------+ +-----------------------------+
-| - get_blueprint() | | - before_create(pkg/res) |
-| - Rutas / Templates| | - after_create(pkg/res) |
-| - /sello/listar | | - before_update(pkg/res) |
-| - /resource_form | | - after_update(pkg/res) |
-| - app_context_proc | | |
-| - inject_sello_ | | |
-| extras() | | |
-+--------------------+ +-----------------------------+
-| ^
-| |
-| |
-+-----------------------+
-(interacción)
++---------------------+ 
+| SelloExcelenciaView |
+| (Blueprint & UI)    |
++---------------------+ 
+| - get_blueprint()   |
+|  - Rutas / Templates| 
+|  - /sello/listar    | 
+|  - /resource_form   | 
+|  - app_context_proc |
+|  - inject_sello_    |
+|  - extras()          |
++---------------------+ 
+
++-----------------------------+
+| CSVtoGeoJSONDatasetResource |
+| Even(tos CKAN) 				   |
++-----------------------------+
+| - before_create(pkg/res)    |
+| - after_create(pkg/res)     |
+| - before_update(pkg/res)    |
+| - after_update(pkg/res)     |
++-----------------------------+
+
++-----------------------------+
+| ApiODataPluginView          |
+| (Blueprint & UI)   		   |
++-----------------------------+
+| get_blueprint()               |
+| - proxy_datastore           |
+|                             |
++-----------------------------+
+
++-----------------------------+
+| ApiZipShpToGeojsonView      |
+| (Blueprint & UI)   		   |
++-----------------------------+
+| get_blueprint()             |
+|  - shp_to_geojson           | 
+   - convert_shp_geojson      |
+      - convert_job           |
+|                             |
++-----------------------------+
+
++-----------------------------+
+| FixDateFormatPlugin         |
+| Even(tos CKAN) 				   |
++-----------------------------+
+| - before_create(pkg/res)    |
+| - after_create(pkg/res)     |
+| - before_update(pkg/res)    |
+| - after_update(pkg/res)     |
++-----------------------------+
+
 
 ### Descripción de la interacción
 
 1. **SelloExcelenciaView**
-   - Maneja todas las **rutas y vistas** del módulo.
+   - Maneja todas las **rutas y vistas** del módulo de Sellos.
+   - `@app_context_processor` inyecta variables para los templates.
+   - `update_config()` permite configurar CKAN al iniciar el plugin.
+   - `get_blueprint()` Listamiento de los Endpoint del Modulo
+
+2. **ApiODataPluginView**
+   - Maneja todas las **rutas y vistas** del módulo de Sellos.
    - `@app_context_processor` inyecta variables para los templates.
    - `update_config()` permite configurar CKAN al iniciar el plugin.
 
-2. **CSVtoGeoJSONDatasetResourcePlugin**
-   - Maneja **eventos de CKAN** sobre datasets (`IPackageController`) y recursos (`IResourceController`).
-   - Se encarga de **agregar, validar o eliminar los “sellos de excelencia”** en los extras cuando un dataset o recurso se crea o edita.
+3. **ApiZipShpToGeojsonView**
+   - Maneja todas las **rutas y vistas** del módulo de Sellos.
+   - `@app_context_processor` inyecta variables para los templates.
+   - `update_config()` permite configurar CKAN al iniciar el plugin.   
 
-3. **Flujo de datos**
-   - El usuario interactúa con las **vistas** definidas en `SelloExcelenciaView`.
-   - Cuando se crea o edita un dataset o recurso, CKAN dispara los **hooks de eventos**, que son capturados por `CSVtoGeoJSONDatasetResourcePlugin`.
+4. **FixDateFormatPlugin**
+   - Maneja **eventos de CKAN** sobre recursos (`IResourceController`).
+   - Se encarga de **agregar, validar o eliminar el formato de datos en las vistas”** cuando el recurso edita.
+
+5. **Flujo de datos**
+   - El usuario interactúa con las **vistas** definidas en `SelloExcelenciaView`,`ApiODataPluginView`,`ApiZipShpToGeojsonView`.
+   - Cuando se crea o edita un dataset o recurso, CKAN dispara los **hooks de eventos**, que son capturados por `CSVtoGeoJSONDatasetResourcePlugin` y `FixDateFormatPlugin`.
    - Los templates pueden acceder a variables globales inyectadas desde `inject_sello_extras()`.
 
 ---

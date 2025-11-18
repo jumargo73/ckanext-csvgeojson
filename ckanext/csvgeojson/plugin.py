@@ -11,12 +11,12 @@ log = logging.getLogger(__name__)
 class CSVtoGeoJSONApiPlugin(SingletonPlugin):
     
     implements(IBlueprint)
-    log.info("[CSVtoGeoJSONPlugin] CSVtoGeoJSONApi Cargado con Exito")
+    #log.info("[CSVtoGeoJSONPlugin] CSVtoGeoJSONApi Cargado con Exito")
     def get_blueprint(self):
         """
         Crea un Blueprint con endpoint manual para convertir CSV a GeoJSON.
         """
-        log.info("[CSVtoGeoJSONPlugin] get_blueprint ejecutado")
+        #log.info("[CSVtoGeoJSONPlugin] get_blueprint ejecutado")
 
         bp = Blueprint('csvgeojson_manual', __name__)
 
@@ -58,10 +58,10 @@ class CSVtoGeoJSONApiPlugin(SingletonPlugin):
                 )
 
                 if geojson_resource:
-                    log.info("[CSVtoGeoJSONPlugin] GeoJSON ya existe, será actualizado (ID: %s)", geojson_resource['id'])
+                    #log.info("[CSVtoGeoJSONPlugin] GeoJSON ya existe, será actualizado (ID: %s)", geojson_resource['id'])
                     GeoJSONConverter.convertir_csv_geojson(resource['id'], geojson_resource['id'])  # Pasar ID para update
                 else:
-                    log.info("[CSVtoGeoJSONPlugin] No hay GeoJSON, creando nuevo")
+                    #log.info("[CSVtoGeoJSONPlugin] No hay GeoJSON, creando nuevo")
                     GeoJSONConverter.self.convertir_csv_geojson(resource['id'])  
 
                 return jsonify({"success": True, "message": f"GeoJSON generado para recurso {resource_id}"})

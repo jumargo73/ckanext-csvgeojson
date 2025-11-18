@@ -1,0 +1,51 @@
+{% extends "page.html" %}
+
+{%  block title  %}Cargar Cartografia{% endblock %}
+
+{% block primary_content %}
+<h2>Convertir Shape a CSV-GeoJSON</h2>
+<form action="{{ h.url_for('Shp_GeoJson.convert_shp_geojson') }}"              
+      method="post" 
+      enctype="multipart/form-data">
+
+    <!-- Token CSRF obligatorio en CKAN -->
+	{{ csrf_field|safe }}  
+
+    <div class="form-group control-medium">
+        <label for="upload">Archivo Shape(zip)</label>
+        <input type="file" name="upload" id="upload" class="form-control">
+    </div> 
+
+    <div class="form-group control-medium">
+      <label for="owner_org" class="form-label">Dependencia</label>
+      <div class="controls">
+        <select id="owner_org" name="owner_org" data-module="autocomplete">
+          <option value="" selected="selected"> Escoja una Organizacion</option>>
+          {% for organization in organizations %}
+            <option value="{{ organization.id }}" {% if entidad is defined  and organization.id == entidad.id %}selected="selected"{% endif %}>{{organization.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group control-medium">
+      <label for="dataset_org" class="form-label">Dataset</label>
+      <div class="controls">
+        <select id="dataset_org" name="dataset_org" data-module="autocomplete">
+          <option value="" selected="selected"> Escoja una Dataset</option>>
+          {% for dataset in datasets %}
+            <option value="{{ dataset }}" {% if package is defined  and dataset == package %}selected="selected"{% endif %}>{{dataset}}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Convertir</button>
+
+</form>
+
+{% endblock %}
+
+{% block secondary_content %}
+ 
+{% endblock %}

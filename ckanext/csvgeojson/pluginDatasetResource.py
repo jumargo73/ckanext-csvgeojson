@@ -3,7 +3,7 @@ from ckan.plugins import toolkit
 from ckan.plugins.interfaces import IResourceView, IConfigurer, IBlueprint
 from flask import Blueprint,request
 import json, logging,os,  mimetypes
-from datetime import datetime
+from datetime import datetime, date
 import ckan.logic as logic
 import ckan.model as model
 from model import Session, Resource,Package,PackageExtra
@@ -17,6 +17,7 @@ import ckan.lib.helpers as h
 from ckan.common import request
 from ckan.lib.helpers import flash_error, redirect_to
 from sqlalchemy.orm import joinedload
+from dateutil.relativedelta import relativedelta
 
 TRUTHY = {'true', 'on', '1', 'si', 'sí'}
 
@@ -66,10 +67,10 @@ class CSVtoGeoJSONDatasetResourcePlugin(SingletonPlugin):
             )
 
             if geojson_resource:
-                log.info("[CSVtoGeoJSONPlugin] GeoJSON ya existe, será actualizado (ID: %s)", geojson_resource['id'])
+                #log.info("[CSVtoGeoJSONPlugin] GeoJSON ya existe, será actualizado (ID: %s)", geojson_resource['id'])
                 GeoJSONConverter.convertir_csv_geojson(resource['id'], geojson_resource['id'])  # Pasar ID para update
             else:
-                log.info("[CSVtoGeoJSONPlugin] No hay GeoJSON, creando nuevo")
+                #log.info("[CSVtoGeoJSONPlugin] No hay GeoJSON, creando nuevo")
                 GeoJSONConverter.convertir_csv_geojson(resource['id'])
 
     
@@ -90,7 +91,7 @@ class CSVtoGeoJSONDatasetResourcePlugin(SingletonPlugin):
         # Determinar si está marcado
         is_checked = bool(val and str(val).strip().lower() in TRUTHY)
 
-        log.info("[CSVtoGeoJSONPlugin] after_dataset_update tiene sello , %s",is_checked) 
+        #log.info("[CSVtoGeoJSONPlugin] after_dataset_update tiene sello , %s",is_checked) 
 
         # Traer el dataset actual
         pkg_id = pkg_dict.get('id') or pkg_dict.get('name')
@@ -111,7 +112,7 @@ class CSVtoGeoJSONDatasetResourcePlugin(SingletonPlugin):
         new_context = dict(context, skip_sello_excelencia=True)
         toolkit.get_action('package_patch')(new_context, {'id': pkg_id, 'extras': extras})
 
-        log.info("[CSVtoGeoJSONPlugin] after_dataset_update Dataset Marcado con Exito")          
+        #log.info("[CSVtoGeoJSONPlugin] after_dataset_update Dataset Marcado con Exito")          
         
 
     # --- resource_delete ---
@@ -138,8 +139,8 @@ class CSVtoGeoJSONDatasetResourcePlugin(SingletonPlugin):
     # --- dataset_show ---   
     def after_dataset_show(self,context: Context, pkg_dict: dict[str, Any]):
 
-        log.info("[CSVtoGeoJSONPlugin] after_dataset_show ejecutado")
-        #log.info("[SelloExcelenciaView] fter_dataset_show pkg_dict devuelto: %s", json.dumps(pkg_dict, indent=2, ensure_ascii=False))    
+        #log.info("[CSVtoGeoJSONPlugin] after_dataset_show ejecutado")
+        ##log.info("[SelloExcelenciaView]  fter_dataset_show pkg_dict devuelto: %s", json.dumps(pkg_dict, indent=2, ensure_ascii=False))    
         return pkg_dict
         
     def before_dataset_view(self,pkg_dict: dict[str, Any]):
@@ -181,11 +182,11 @@ class SelloExcelenciaView(SingletonPlugin):
     implements(IBlueprint)
     implements(IConfigurer)
     
-    log.info("[SelloExcelenciaView] Cargado con Exito")
+    log.info("[SelloExcelenciaView]  Cargado con Exito")
     
     def update_config(self, config):
         
-        log.info("[SelloResourcePlugin] update_config ejecutado")
+        log.info("[SelloExcelenciaView] update_config ejecutado")
 
         # Ruta absoluta de la carpeta templates de este plugin
         template_path = os.path.join(os.path.dirname(__file__), 'templates')
@@ -198,12 +199,12 @@ class SelloExcelenciaView(SingletonPlugin):
         # Verificar que los archivos existan
         for root, dirs, files in os.walk(template_path):
             for f in files:
-                log.info(f"[SelloResourcePlugin] Template detectado: {os.path.join(root, f)}")
+                log.info(f"[SelloExcelenciaView] Template detectado: {os.path.join(root, f)}")
 
         # Verificar que los archivos existan
         for root, dirs, files in os.walk(public_path):
             for f in files:
-                log.info(f"[SelloResourcePlugin] Imagenes detectadas: {os.path.join(root, f)}")
+                log.info(f"[SelloExcelenciaView] Imagenes detectadas: {os.path.join(root, f)}")
       
         # Método oficial CKAN
         toolkit.add_template_directory(config, 'templates')
@@ -222,27 +223,27 @@ class SelloExcelenciaView(SingletonPlugin):
         @sello_bp.route("/sello/listar")
         def listar_sellos():
 
-            log.info("[SelloExcelenciaView] listar_sellos ejecutado")
+            #log.info("[SelloExcelenciaView]  listar_sellos ejecutado")
             
             '''context = {'user': toolkit.c.user or toolkit.config.get('ckan.site_id')}
 
-            #log.info("[SelloExcelenciaView] context: %s", json.dumps(context, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView]  context: %s", json.dumps(context, indent=2, ensure_ascii=False))
 
             # aquí validas si tiene permisos, por ejemplo acceso admin a dataset
             try: 
                 toolkit.check_access('package_update', context)
-                log.info("[SelloExcelenciaView] Con Acceso")
+                #log.info("[SelloExcelenciaView]  Con Acceso")
                 can_edit = True
             except logic.NotAuthorized:
-                log.info("[SelloExcelenciaView] Sin acceso")
+                #log.info("[SelloExcelenciaView]  Sin acceso")
                 can_edit = False'''
 
             can_edit = True    
-            log.info("[SelloExcelenciaView] acceso: true")
+            #log.info("[SelloExcelenciaView]  acceso: true")
 
             # URL base del portal CKAN
             base_url = config.get('ckan.site_url', '').rstrip('/')
-            log.info("[SelloExcelenciaView] base_url: %s", base_url)
+            #log.info("[SelloExcelenciaView]  base_url: %s", base_url)
 
             # Consultar todos los recursos PDF
             recursos = Session.query(Resource).filter(
@@ -264,7 +265,7 @@ class SelloExcelenciaView(SingletonPlugin):
                             extras = {}                           
                     elif isinstance(r.extras, dict):
                         extras = r.extras
-                        log.info("[SelloExcelenciaView] listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
+                        #log.info("[SelloExcelenciaView]  listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
 
                 
 
@@ -276,10 +277,10 @@ class SelloExcelenciaView(SingletonPlugin):
                 url_descarga = f"{base_url}/dataset/{r.package_id}/resource/{r.id}/download/{archivo}"
 
                 # Logs de depuración
-                log.info("[SelloExcelenciaView] package_id: %s", r.package_id)
-                log.info("[SelloExcelenciaView] resource_id: %s", r.id)
-                log.info("[SelloExcelenciaView] archivo: %s", archivo)
-                log.info("[SelloExcelenciaView] url_descarga: %s", url_descarga)
+                #log.info("[SelloExcelenciaView]  package_id: %s", r.package_id)
+                #log.info("[SelloExcelenciaView]  resource_id: %s", r.id)
+                #log.info("[SelloExcelenciaView]  archivo: %s", archivo)
+                #log.info("[SelloExcelenciaView]  url_descarga: %s", url_descarga)
 
                 
                 # Agregar a la lista
@@ -292,6 +293,7 @@ class SelloExcelenciaView(SingletonPlugin):
                     'fecha': r.created,
                     'categoria': extras.get('type'),
                     'fecha_obtencion': extras.get('fecha_obtencion'),
+                    'fecha_vencimiento': extras.get('fecha_vencimiento'),
                     'dependiencia': extras.get('owner_org'),
                     'nivel': extras.get('nivel')
                 })
@@ -322,21 +324,21 @@ class SelloExcelenciaView(SingletonPlugin):
         def sello_edit(id):
 
             
-            log.info("[sello_excelencia] sello_edit Ejecutado") 
+            log.info("[SelloExcelenciaView] sello_edit Ejecutado") 
            
             # 🔹 Log completo de la lista sellos
-            log.info("[sello_excelencia] sello_edit id: %s", id)
+            #log.info("[SelloExcelenciaView] sello_edit id: %s", id)
 
             context = {'model': model, 'session': model.Session,'user': toolkit.c.user or toolkit.config.get('ckan.site_id')}
             
             organizations=self.listar_organizaciones()
 
-            log.info("[sello_excelencia] sello_edit organizations: %s", json.dumps(organizations, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView] sello_edit organizations: %s", json.dumps(organizations, indent=2, ensure_ascii=False))
            
  
             sello = self.get_sello(id,context)  # lógica de obtener el recurso
             
-            log.info("[sello_excelencia] sello_edit sello: %s", sello)
+            #log.info("[SelloExcelenciaView] sello_edit sello: %s", sello)
 
             extras = {}
             if sello.extras:
@@ -348,23 +350,23 @@ class SelloExcelenciaView(SingletonPlugin):
                 elif isinstance(sello.extras, dict):
                     extras = sello.extras
             
-            log.info("[SelloExcelenciaView] listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView]  listar_sellos extras dict Encontrado: %s", json.dumps(extras, indent=2, ensure_ascii=False))
 
             package = toolkit.get_action('package_show')(
                     context,
                     {'id': sello.package_id}
                 )
             
-            log.info("[sello_excelencia] sello_edit package: %s", json.dumps(package, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView] sello_edit package: %s", json.dumps(package, indent=2, ensure_ascii=False))
                         
-            log.info("[sello_excelencia] sello_edit organizacion_id: %s", package['organization']['id'])
+            #log.info("[SelloExcelenciaView] sello_edit organizacion_id: %s", package['organization']['id'])
             
             entidad = toolkit.get_action('organization_show')(
                     context,
                     {'id': package['organization']['id']}
                 )
 
-            log.info("[sello_excelencia] sello_edit organization: %s", json.dumps(entidad, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView] sello_edit organization: %s", json.dumps(entidad, indent=2, ensure_ascii=False))
               
 
             # Si es GET, mostrar formulario
@@ -400,13 +402,13 @@ class SelloExcelenciaView(SingletonPlugin):
         
             # 3️⃣ Aquí haces lo que necesites con los datos, por ejemplo:
             
-            log.info("[SelloExcelenciaView] update_sello_resource Package ID:: %s", package_id)
-            log.info("[SelloExcelenciaView] update_sello_resource Nombre: %s", nombre)
-            log.info("[SelloExcelenciaView] update_sello_resource Extensión: %s", extension)
-            log.info("[SelloExcelenciaView] update_sello_resource Descripción: %s", description)
-            log.info("[SelloExcelenciaView] update_sello_resource owner_org: %s", owner_org) 
-            log.info("[SelloExcelenciaView] update_sello_resource fecha_obtencion: %s", fecha_obtencion)   
-            log.info("[SelloExcelenciaView] update_sello_resource nivel: %s", nivel)                   
+            #log.info("[SelloExcelenciaView]  update_sello_resource Package ID:: %s", package_id)
+            #log.info("[SelloExcelenciaView]  update_sello_resource Nombre: %s", nombre)
+            #log.info("[SelloExcelenciaView]  update_sello_resource Extensión: %s", extension)
+            #log.info("[SelloExcelenciaView]  update_sello_resource Descripción: %s", description)
+            #log.info("[SelloExcelenciaView]  update_sello_resource owner_org: %s", owner_org) 
+            #log.info("[SelloExcelenciaView]  update_sello_resource fecha_obtencion: %s", fecha_obtencion)   
+            #log.info("[SelloExcelenciaView]  update_sello_resource nivel: %s", nivel)                   
         
             resource = toolkit.get_action('resource_show')({'user': toolkit.c.user}, {'id': id})
             package = toolkit.get_action('package_show')({'user': toolkit.c.user}, {'id': resource['package_id']})
@@ -440,7 +442,7 @@ class SelloExcelenciaView(SingletonPlugin):
                     'description':description
                 }
 
-            log.info("[SelloExcelenciaView] update_sello_resource resource_dict: %s", resource_dict)
+            #log.info("[SelloExcelenciaView]  update_sello_resource resource_dict: %s", resource_dict)
             
             #Crear Recurso
             result = self.save_sello_excelencia(resource_dict,file_name,archivo,context,organizacion,resource)
@@ -454,6 +456,8 @@ class SelloExcelenciaView(SingletonPlugin):
         
         @sello_bp.route('/sello/delete/<id>', methods=['POST'])
         def sello_delete(id):
+
+            log.info("[SelloExcelenciaView]  sello_delete ejecutado")
 
             context = {
                 "model": model,
@@ -480,7 +484,7 @@ class SelloExcelenciaView(SingletonPlugin):
     
             try:
                 
-                log.info("[SelloExcelenciaView] new_sello_resource ejecutado")
+                log.info("[SelloExcelenciaView]  new_sello_resource ejecutado")
                 
                 # Obtener el dataset
                 package = toolkit.get_action('package_show')(
@@ -515,13 +519,13 @@ class SelloExcelenciaView(SingletonPlugin):
                 
                     # 3️⃣ Aquí haces lo que necesites con los datos, por ejemplo:
                     
-                    log.info("[SelloExcelenciaView] new_sello_resource Package ID:: %s", package_id)
-                    log.info("[SelloExcelenciaView] new_sello_resource Nombre: %s", nombre)
-                    log.info("[SelloExcelenciaView] new_sello_resource Extensión: %s", extension)
-                    log.info("[SelloExcelenciaView] new_sello_resource Descripción: %s", description)
-                    log.info("[SelloExcelenciaView] new_sello_resource owner_org: %s", owner_org) 
-                    log.info("[SelloExcelenciaView] new_sello_resource fecha_obtencion: %s", fecha_obtencion)   
-                    log.info("[SelloExcelenciaView] new_sello_resource nivel: %s", nivel)                   
+                    #log.info("[SelloExcelenciaView]  new_sello_resource Package ID:: %s", package_id)
+                    #log.info("[SelloExcelenciaView]  new_sello_resource Nombre: %s", nombre)
+                    #log.info("[SelloExcelenciaView]  new_sello_resource Extensión: %s", extension)
+                    #log.info("[SelloExcelenciaView]  new_sello_resource Descripción: %s", description)
+                    #log.info("[SelloExcelenciaView]  new_sello_resource owner_org: %s", owner_org) 
+                    #log.info("[SelloExcelenciaView]  new_sello_resource fecha_obtencion: %s", fecha_obtencion)   
+                    #log.info("[SelloExcelenciaView]  new_sello_resource nivel: %s", nivel)                   
                 
                   
 
@@ -544,7 +548,7 @@ class SelloExcelenciaView(SingletonPlugin):
                             'description':description
                         }
 
-                        log.info("[SelloExcelenciaView] new_sello_resource resource_dict: %s", resource_dict)
+                        #log.info("[SelloExcelenciaView]  new_sello_resource resource_dict: %s", resource_dict)
                         
                        
                         
@@ -573,7 +577,7 @@ class SelloExcelenciaView(SingletonPlugin):
         @sello_bp.app_context_processor
         def inject_sello_extras():
 
-            log.info("[SelloExcelenciaView] injenject_sello_extras")
+            log.info("[SelloExcelenciaView]  injenject_sello_extras Ejecutado")
            
             if request.endpoint == 'dataset.edit':
                 try:
@@ -582,12 +586,12 @@ class SelloExcelenciaView(SingletonPlugin):
                     pkg = model.Session.query(model.Package).options(joinedload(model.Package._extras)).filter_by(name=dataset_id).first()
                     extras_dict = {}
                     if pkg:
-                        log.info("[SelloExcelenciaView] injenject_sello_extras pkg._extras: %s", pkg._extras)
+                        #log.info("[SelloExcelenciaView]  injenject_sello_extras pkg._extras: %s", pkg._extras)
                         for key, extra_obj in pkg._extras.items():
                             extras_dict[key] = extra_obj.value  # extra_obj.value es el valor que queremos
                         return dict(_extras=extras_dict)
                 except Exception as e:                        
-                    log.info("[SelloExcelenciaView] injenject_sello_extras pkg: %s", e)
+                    #log.info("[SelloExcelenciaView]  injenject_sello_extras pkg: %s", e)
                     return dict(_extras={})
             return dict()
             
@@ -597,6 +601,9 @@ class SelloExcelenciaView(SingletonPlugin):
 
     def get_sello(self, id,context):
 
+        
+        log.info("[SelloExcelenciaView]  get_sello Ejecutado")
+        
         resource = Session.query(Resource).filter(
             Resource.format.ilike('PDF'),
             Resource.id == id
@@ -605,12 +612,14 @@ class SelloExcelenciaView(SingletonPlugin):
         return resource
 
     def sello_edit(self, id,context):
+        log.info("[SelloExcelenciaView]  sello_edit Ejecutado")
         resource = toolkit.get_action('resource_show')(context, {'id': id})
         return resource
         
 
 
     def sello_delete(self, id,context):
+        log.info("[SelloExcelenciaView]  sello_delete Ejecutado")
         resource = toolkit.get_action('resource_delete')(context, {'id': id})
         return resource
 
@@ -619,11 +628,12 @@ class SelloExcelenciaView(SingletonPlugin):
         
         
         try:
-            
+            log.info("[SelloExcelenciaView]  save_sello_excelencia Ejecutado")
+
             """
             Crea un recurso placeholder y luego actualiza con extras y datos reales.
             """
-
+            storage_path = '/var/lib/ckan/default/'
             #package_id = package['id']
             
             #data_dict = dict(toolkit.request.form)
@@ -643,14 +653,14 @@ class SelloExcelenciaView(SingletonPlugin):
                 resource_dict["id"] = resource["id"]
                 action = "resource_update"
                 resource = toolkit.get_action('resource_update')(context, resource_dict)
-                log.info("[SelloExcelenciaView] save_sello_excelencia resource update: %s", json.dumps(resource, indent=2, ensure_ascii=False))
+                #log.info("[SelloExcelenciaView]  save_sello_excelencia resource update: %s", json.dumps(resource, indent=2, ensure_ascii=False))
 
             else:
                 # Crear nuevo recurso
                 action = "resource_create"
             
                 resource = toolkit.get_action('resource_create')(context, resource_dict)
-                log.info("[SelloExcelenciaView] save_sello_excelencia create: %s", json.dumps(resource, indent=2, ensure_ascii=False))
+                #log.info("[SelloExcelenciaView]  save_sello_excelencia create: %s", json.dumps(resource, indent=2, ensure_ascii=False))
 
            
             
@@ -658,16 +668,15 @@ class SelloExcelenciaView(SingletonPlugin):
             
             resource_id = resource['id']
             
-            #log.info("[SelloExcelenciaView] crear_sello_excelencia resource_id: %s", resource_id)
+            ##log.info("[SelloExcelenciaView]  crear_sello_excelencia resource_id: %s", resource_id)
             
             nuevo_nombre = resource_id[6:] 
-            #log.info("[SelloExcelenciaView] crear_sello_excelencia nuevo_nombre: %s", nuevo_nombre)
+            ##log.info("[SelloExcelenciaView]  crear_sello_excelencia nuevo_nombre: %s", nuevo_nombre)
                       
             
            
             # 2 Calcular ruta destino CKAN
             geojson_res_id = resource_id # UUID del recurso
-            storage_path = toolkit.config.get('ckan.storage_path')
             subdir = os.path.join('resources',geojson_res_id[0:3], geojson_res_id[3:6]) # Creacion Arbol donde va a qUUID del recurso
             dest_dir = os.path.join(storage_path,subdir)
             os.makedirs(dest_dir, exist_ok=True)
@@ -712,22 +721,22 @@ class SelloExcelenciaView(SingletonPlugin):
             updated_resource = toolkit.get_action('resource_update')(context, resource)
             #updated_resource = toolkit.get_action('resource_update')(context, resource_dict)
 
-            log.info("[SelloExcelenciaView] save_sello_excelencia resource update 1: %s", json.dumps(updated_resource, indent=2, ensure_ascii=False))
+            #log.info("[SelloExcelenciaView]  save_sello_excelencia resource update 1: %s", json.dumps(updated_resource, indent=2, ensure_ascii=False))
 
     
             # 5 Marcar Etiqueta de Sello
             response=self.marcar_recurso_sello(resource_id,organizacion)
-            log.info("[SelloExcelenciaView] Recurso Guardado con Exito")
+            #log.info("[SelloExcelenciaView]  Recurso Guardado con Exito")
             return True
         except Exception as e:
-            log.info("[SelloExcelenciaView] Error al guardar el archivo: $s",e)           
+            #log.info("[SelloExcelenciaView]  Error al guardar el archivo: $s",e)           
             return  False
 
     def marcar_recurso_sello(self, resource_id,organizacion):
 
         try:
 
-            log.info("[SelloExcelenciaView] marcar_recurso_sello Ejecutado")
+            log.info("[SelloExcelenciaView]  marcar_recurso_sello Ejecutado")
 
             # El context suele incluir al usuario (puede ser sysadmin)
             context = {
@@ -740,22 +749,49 @@ class SelloExcelenciaView(SingletonPlugin):
             get_resource = toolkit.get_action('resource_show')            
             resource = get_resource({'ignore_auth': True}, {'id': resource_id})
 
-            log.info("[SelloExcelenciaView] marcar_recurso_sello resource show: %s", resource)
+            #log.info("[SelloExcelenciaView]  marcar_recurso_sello resource show: %s", resource)
 
 
             #owner_org = toolkit.request.form.get('owner_org')
             #organizacion = toolkit.get_action('organization_show')(context, {'id': owner_org})
         
             fecha_obtencion = toolkit.request.form.get('fecha_obtencion')
+            log.info("[SelloExcelenciaView]  marcar_recurso_sello fecha_obtencion: %s", fecha_obtencion) 
+
+            try:
+                
+                # Normalizar la fecha: convertir solo si es str
+                if isinstance(fecha_obtencion, str):
+                    fecha_dt = datetime.strptime(fecha_obtencion, "%Y-%m-%d")
+                elif isinstance(fecha_obtencion, datetime):
+                    fecha_dt = fecha_obtencion
+                elif isinstance(fecha_obtencion, date):
+                    # Convertir date -> datetime para poder sumar el relativedelta sin problemas
+                    fecha_dt = datetime.combine(fecha_obtencion, datetime.min.time())
+                else:
+                    log.error(">>> Tipo no soportado: %s", fecha_vencimiento)
+                    raise ValueError(f"Tipo no soportado ({type(fecha_obtencion)}) para fecha_obtencion")
+  
+                # Sumar 1 año
+                fecha_vencimiento = (fecha_dt + relativedelta(years=1)).date()
+                log.info("[SelloExcelenciaView] fecha_obtencion: %s → fecha_vencimiento: %s", fecha_dt.date(), fecha_vencimiento)
+            except Exception as e:
+                log.error(">>> ERROR calculando fecha_vencimiento: %s", e)
+
+            
             nivel = toolkit.request.form.get('nivel')
+            log.info("[SelloExcelenciaView]  marcar_recurso_sello nivel: %s", nivel)  
+
 
 
             # Agregar la bandera como campo plano (CKAN lo guarda en extras)
             resource['type'] = 'sello_excelencia'
             resource['fecha_obtencion'] = fecha_obtencion
+            resource['fecha_vencimiento'] = fecha_vencimiento.strftime("%Y-%m-%d")
             resource['nivel'] = nivel
             resource['owner_org'] = organizacion['title']
             
+            log.info("[SelloExcelenciaView]  marcar_recurso_sello resource: %s", resource)
 
             # Mantener datastore_active si existe
             if 'datastore_active' in resource:
@@ -765,14 +801,14 @@ class SelloExcelenciaView(SingletonPlugin):
             update_resource = toolkit.get_action('resource_update')
             update_resource({'ignore_auth': True}, resource)
 
-            log.info("[SelloExcelenciaView] marcar_recurso_sello resource update: %s", update_resource)
+            
 
 
-            log.info("[SelloExcelenciaView] marcar_recurso_sello marca guardada con exito")
+            log.info("[SelloExcelenciaView]  marcar_recurso_sello marca guardada con exito")
 
             return True
         except Exception as e:
-            log.info("[SelloExcelenciaView] Error al guardar el archivo: $s",e)           
+            #log.info("[SelloExcelenciaView]  Error al guardar el archivo: $s",e)           
             return  False        
             
     def can_view(self, data_dict):
@@ -788,6 +824,7 @@ class SelloExcelenciaView(SingletonPlugin):
         pass
 
     def listar_organizaciones(self):
+        log.info("[SelloExcelenciaView]  listar_organizaciones Ejecutado")
         # El context suele incluir al usuario (puede ser sysadmin)
         context = {
             'model': model,

@@ -1,1 +1,11 @@
-shapely==1.8.5.post1
+# Librerías principales
+ckanapi>=4.6
+geopandas>=1.0.1
+
+
+# Dependencias necesarias para GeoPandas
+fiona>=1.9
+shapely>=2.0
+pyproj>=3.6
+pandas>=2.0
+python-dateutil>=2.8.2
